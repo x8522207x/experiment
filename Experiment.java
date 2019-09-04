@@ -1,17 +1,22 @@
 package experiment;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-public class Experiment {
-	private String sets;
-	private String elements;
-	private String length;
+public class Experiment implements DealMethod {
+	final private String sets;
+	final private String elements;
+	final private String length;
 
 	public Experiment(String[] args) {
 		this.sets = args[0];
@@ -19,30 +24,22 @@ public class Experiment {
 		this.length = args[2];
 	}
 
-	public ArrayList<ArrayList<StringBuilder>> generateData(Random ran, Map<String, String> setHasElement,
+	public ArrayList<ArrayList<StringBuilder>> generateData(Random ran, Map<String, TreeSet<String>> setHasElement,
 			TreeSet<String> set, ArrayList<ArrayList<StringBuilder>> A, String args[], int setTimes) {
 		for (int a = 0; a < Integer.valueOf(this.sets) * setTimes; a++) {// 有幾個SET
 			ArrayList<StringBuilder> S = new ArrayList<StringBuilder>();
 			for (int b = 0; b < Integer.valueOf(this.elements); b++) {// 每個SET裡面幾個ELEMENT
+				TreeSet<String> treeSet = new TreeSet<String>();
 				StringBuilder element = new StringBuilder();
 				for (int c = 0; c < ran.nextInt(Integer.valueOf(this.length)) + 1; c++) {// 每個ELEMENT的長度
 					element.append(ran.nextInt(10));// ELEMENT的內容
 				}
+
 				if (setHasElement.containsKey(element.toString())) {
-					String suppose = setHasElement.get(element.toString()) + "-" + String.valueOf(a);
-					Boolean repeat = false;
-					for (String d : setHasElement.get(element.toString()).split("-")) {
-						if (d.equals(String.valueOf(a))) {
-							repeat = true;
-							break;
-						}
-					}
-					if (repeat == false) {
-						setHasElement.put(element.toString(), suppose);
-					}
-				} else {
-					setHasElement.put(element.toString(), String.valueOf(a));
+					treeSet = setHasElement.get(element.toString());
 				}
+				treeSet.add(String.valueOf(a));
+				setHasElement.put(element.toString(), treeSet);
 				set.add(element.toString());
 				S.add(b, element);
 			}
@@ -51,24 +48,26 @@ public class Experiment {
 		return A;
 	}
 
-	public Map<String, Integer> initTimes(int setTimes) {
-		Map<String, Integer> sunflowerTimes = new TreeMap<String, Integer>();
+	public Map<Integer, Integer> initTimes(int setTimes) {
+		Map<Integer, Integer> sunflowerTimes = new TreeMap<Integer, Integer>();
 		for (int i = 2; i <= Integer.valueOf(this.sets) * setTimes; i++) {
-			sunflowerTimes.put(Integer.toString(i), 0);
+			sunflowerTimes.put(i, 0);
 		}
 		return sunflowerTimes;
 	}
 
-	public void compareSets(ArrayList<String> C, ArrayList<String> D) {
-		D.add(C.get(0));
-		for (int a = 1; a < C.size(); a++) {
-			StringBuilder E = new StringBuilder();
-			int sameSetposition = -1;
+	public ArrayList<TreeSet<String>> compareSets(ArrayList<TreeSet<String>> C, ArrayList<TreeSet<String>> D,
+			int index) {
+		int sameSetposition = -1;
+		TreeSet<String> E = new TreeSet<String>();
+		if (D.isEmpty()) {
+			D.add(C.get(index));
+		} else {
 			for (int b = 0; b < D.size(); b++) {
-				for (String c : D.get(b).split("-")) {
-					for (String d : C.get(a).split("-")) {
+				for (String d : D.get(b)) {
+					for (String c : C.get(index)) {
 						if (c.equals(d)) {
-							E.append(d + "-");
+							E.add(d);
 							sameSetposition = b;
 							break;
 						}
@@ -78,65 +77,70 @@ public class Experiment {
 					break;
 				}
 			}
-			if (E.length() > 0 && E.substring(0, E.length() - 1).split("-").length > 1) {
-				D.set(sameSetposition, E.substring(0, E.length() - 1));
+			if (E.size() > 1) {
+				D.set(sameSetposition, E);
 			} else {
-				D.add(C.get(a));
+				D.add(C.get(index));
 			}
 		}
+		index++;
+		if (index < C.size()) {
+			return compareSets(C, D, index);
+		} else {
+			return D;
+		}
+
 	}
 
-	public Map<String, Integer> sunflowerResults(int setTimes, Map<String, Integer> sunflowerTimes,
-			ArrayList<ArrayList<StringBuilder>> A, ArrayList<String> C, ArrayList<String> D,
-			Map<String, Integer> sunflowerSize) {
-		for (int i = 2; i <= Integer.valueOf(this.sets) * setTimes; i++) {
-			sunflowerSize.put(Integer.toString(i), 0);
+	public Map<Integer, Integer> sunflowerResults(int setTimes, Map<Integer, Integer> sunflowerTimes,
+			ArrayList<ArrayList<StringBuilder>> A, ArrayList<TreeSet<String>> C, ArrayList<TreeSet<String>> D,
+			Map<Integer, Integer> sunflowerSize) {
+		for (int i = 1; i <= Integer.valueOf(this.sets) * setTimes; i++) {
+			sunflowerSize.put(i, 0);
 		}
-		for (String i : D) {
-			int length = i.split("-").length;
-			sunflowerSize.put(Integer.toString(length), sunflowerSize.get(Integer.toString(length)) + 1);
+
+		for (TreeSet<String> i : D) {
+			sunflowerSize.put(i.size(), sunflowerSize.get(i.size()) + 1);
 		}
+
 		if (C.size() == 0) {
-			sunflowerSize.put(Integer.toString(A.size()), 1);
+			sunflowerSize.put(A.size(), 1);
 		}
 		for (int i = 2; i <= (Integer.valueOf(this.sets) * setTimes); i++) {
-			if (sunflowerSize.get(Integer.toString(i)) > 0) {
-				sunflowerTimes.put(Integer.toString(i), sunflowerTimes.get(Integer.toString(i)) + 1);
+			if (sunflowerSize.get(i) > 0) {
+				sunflowerTimes.put(i, sunflowerTimes.get(i) + 1);
 			}
 		}
 		return sunflowerTimes;
 	}
 
-	public ArrayList<String> getSets(Map<String, String> setHasElement, ArrayList<String> C) {
-		for (Iterator it = setHasElement.values().iterator(); it.hasNext();) {
-			String sets = it.next().toString();
-			if (sets.split("-").length > 1) {
-				C.add(sets);
-			}
-		}
+	public ArrayList<TreeSet<String>> getSets(Map<String, TreeSet<String>> setHasElement,
+			ArrayList<TreeSet<String>> C) {
+		C.addAll(setHasElement.values());
 		return C;
 	}
 
 	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		Experiment experiment = new Experiment(args);
-		// for (int setTimes = 1; setTimes < 6; setTimes++) {
-		Map<String, Integer> sunflowerTimes = experiment.initTimes(/* setTimes */1);
+		String[] test = { "200", "10", "5" };
+		Experiment experiment = new Experiment(test);
+		// // for (int setTimes = 1; setTimes < 6; setTimes++) {
+		Map<Integer, Integer> sunflowerTimes = experiment.initTimes(/* setTimes */1);
 		for (int times = 0; times < 1000; times++) {
 			Random ran = new Random();
 			TreeSet<String> set = new TreeSet<String>();
 			ArrayList<ArrayList<StringBuilder>> A = new ArrayList<ArrayList<StringBuilder>>();
-			Map<String, String> setHasElement = new HashMap<String, String>();
-			ArrayList<String> C = new ArrayList<String>();
-			ArrayList<String> D = new ArrayList<String>();
-			Map<String, Integer> sunflowerSize = new TreeMap<String, Integer>();
+			Map<String, TreeSet<String>> setHasElement = new HashMap<String, TreeSet<String>>();
+			ArrayList<TreeSet<String>> C = new ArrayList<TreeSet<String>>();
+			ArrayList<TreeSet<String>> D = new ArrayList<TreeSet<String>>();
+			Map<Integer, Integer> sunflowerSize = new TreeMap<Integer, Integer>();
 			A = experiment.generateData(ran, setHasElement, set, A, args, /* setTimes */1);
 			C = experiment.getSets(setHasElement, C);
-			experiment.compareSets(C, D);
+			int index = 0;
+			D = experiment.compareSets(C, D, index);
 			sunflowerTimes = experiment.sunflowerResults(/* setTimes */1, sunflowerTimes, A, C, D, sunflowerSize);
 		}
-		System.out.println(sunflowerTimes);
 		// }
 	}
 }
