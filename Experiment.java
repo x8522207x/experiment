@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-public class Experiment implements DealMethod {
+public class Experiment<T extends DealMethod> {
 	final private String sets;
 	final private String elements;
 	final private String length;
@@ -141,6 +141,7 @@ public class Experiment implements DealMethod {
 			D = experiment.compareSets(C, D, index);
 			sunflowerTimes = experiment.sunflowerResults(/* setTimes */1, sunflowerTimes, A, C, D, sunflowerSize);
 		}
+		System.out.println(sunflowerTimes);
 		// }
 	}
 }
